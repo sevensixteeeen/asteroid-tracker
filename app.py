@@ -54,9 +54,15 @@ with st.sidebar:
                 st.error(f"Couldn't fetch new data: {error}")
     st.caption("Uses the NASA_API_KEY environment variable, or NASA's shared demo key.")
 
+# The data folder isn't saved in git, so a fresh copy of the app (like one
+# deployed to Streamlit Community Cloud) starts with no file. Fetch it once.
 if not IN_FILE.exists():
-    st.info("No data yet. Click **Fetch latest from NASA** in the sidebar.")
-    st.stop()
+    with st.spinner("First run: downloading this week's asteroids from NASA..."):
+        try:
+            fetch_latest()
+        except Exception as error:
+            st.error(f"Couldn't download data from NASA: {error}")
+            st.stop()
 
 df = load_table()
 
