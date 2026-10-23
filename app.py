@@ -9,17 +9,21 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from background import SPACE, add_space_background
 from fetch import fetch_feed, save_json
 from parse import IN_FILE, load_rows
 
 st.set_page_config(page_title="Asteroid Tracker", page_icon="☄️", layout="wide")
+add_space_background()
 
 # Two colors for the chart: one for ordinary asteroids, one for the ones NASA
 # flags as potentially hazardous. Dark mode gets slightly adjusted shades so
 # both stay easy to see on a dark background.
+# "ring" is a thin outline in the background color that keeps overlapping dots
+# apart, and "grid" is kept faint so the gridlines don't compete with the dots.
 COLORS = {
-    "light": {"Not hazardous": "#2a78d6", "Potentially hazardous": "#eb6834", "ring": "#fcfcfb"},
-    "dark": {"Not hazardous": "#3987e5", "Potentially hazardous": "#d95926", "ring": "#1a1a19"},
+    "light": {"Not hazardous": "#2a78d6", "Potentially hazardous": "#eb6834", "ring": "#fcfcfb", "grid": "#e1e0d9"},
+    "dark": {"Not hazardous": "#3987e5", "Potentially hazardous": "#d95926", "ring": SPACE, "grid": "#1f2638"},
 }
 
 
@@ -122,14 +126,21 @@ chart = (
     alt.Chart(shown)
     .mark_circle(size=90, opacity=0.9, stroke=palette["ring"], strokeWidth=2)
     .encode(
-        x=alt.X("miss_distance_lunar:Q", title="Miss distance (Moon distances)", scale=alt.Scale(zero=True)),
+        x=alt.X(
+            "miss_distance_lunar:Q",
+            title="Miss distance (Moon distances)",
+            scale=alt.Scale(zero=True),
+            axis=alt.Axis(tickCount=8, gridColor=palette["grid"]),  # about one label per 25
+        ),
         # Sizes range from a few meters to over a kilometer, so a log scale keeps
         # the small ones from all piling up at the bottom.
-        # nice=False stops the axis rounding up to the next power of ten (10,000 m).
+        # nice=False stops the axis rounding up to the next power of ten (10,000 m),
+        # and listing the tick values stops the extra gridlines in between.
         y=alt.Y(
             "diameter_max_m:Q",
             title="Estimated diameter, max (m)",
             scale=alt.Scale(type="log", nice=False, padding=12),
+            axis=alt.Axis(values=[10, 30, 100, 300, 1000], format=",", gridColor=palette["grid"]),
         ),
         color=alt.Color(
             "group:N",
@@ -153,15 +164,17 @@ st.altair_chart(chart, width="stretch")
 
 # --- Table: every asteroid, sortable by clicking a column header ---
 st.subheader(f"All {len(shown)} asteroids")
+# Round the sizes to whole meters so "localized" shows them as 1,164 rather than 1,164.2.
+table = shown.drop(columns=["id", "group"]).round({"diameter_min_m": 0, "diameter_max_m": 0})
 st.dataframe(
-    shown.drop(columns=["id", "group"]),
+    table,
     hide_index=True,
     width="stretch",
     column_config={
         "name": "Name",
         "approach_time": st.column_config.DatetimeColumn("Closest approach", format="MMM D, HH:mm"),
-        "diameter_min_m": st.column_config.NumberColumn("Diameter min (m)", format="%.0f"),
-        "diameter_max_m": st.column_config.NumberColumn("Diameter max (m)", format="%.0f"),
+        "diameter_min_m": st.column_config.NumberColumn("Diameter min (m)", format="localized"),
+        "diameter_max_m": st.column_config.NumberColumn("Diameter max (m)", format="localized"),
         "speed_km_s": st.column_config.NumberColumn("Speed (km/s)", format="%.1f"),
         "miss_distance_km": st.column_config.NumberColumn("Miss distance (km)", format="localized"),
         "miss_distance_lunar": st.column_config.NumberColumn("Moon distances", format="%.1f"),

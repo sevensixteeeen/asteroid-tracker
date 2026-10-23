@@ -1,0 +1,5 @@
+# Dark by default, so the animated space background in background.py looks right.
+[theme]
+base = "dark"
+backgroundColor = "#070a14"
+secondaryBackgroundColor = "#121a2b"
