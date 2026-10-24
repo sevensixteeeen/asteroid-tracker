@@ -60,7 +60,8 @@ term. It doesn't mean this week's pass is dangerous.
    ```
 
 4. Click **Deploy**. Community Cloud installs everything from `uv.lock`, and the
-   app downloads this week's data from NASA on its first run.
+   app downloads this week's data from NASA on its first run. After that it
+   downloads fresh data again whenever the saved copy is more than a day old.
 
 Use your own key here, not `DEMO_KEY`: the demo key's hourly limit is shared,
 so a hosted app runs out quickly.
@@ -70,4 +71,5 @@ so a hosted app runs out quickly.
 - `fetch.py`: calls the NASA API and saves the raw response
 - `parse.py`: turns the nested JSON into one flat row per asteroid
 - `app.py`: the Streamlit web page
+- `background.py`: the animated space background behind the page (plain CSS)
 - `data/`: downloaded data (not committed to git)

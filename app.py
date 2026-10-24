@@ -3,7 +3,7 @@
 Run it with:  uv run streamlit run app.py
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import altair as alt
 import pandas as pd
@@ -59,14 +59,30 @@ with st.sidebar:
     st.caption("Uses the NASA_API_KEY environment variable, or NASA's shared demo key.")
 
 # The data folder isn't saved in git, so a fresh copy of the app (like one
-# deployed to Streamlit Community Cloud) starts with no file. Fetch it once.
-if not IN_FILE.exists():
-    with st.spinner("First run: downloading this week's asteroids from NASA..."):
+# deployed to Streamlit Community Cloud) starts with no file. Fetch it then, and
+# again once the saved file is a day old, so a hosted app doesn't keep showing
+# last week's asteroids.
+MAX_AGE = timedelta(days=1)
+
+
+def data_is_stale() -> bool:
+    """True if there's no saved feed yet, or it was saved more than MAX_AGE ago."""
+    if not IN_FILE.exists():
+        return True
+    saved_at = datetime.fromtimestamp(IN_FILE.stat().st_mtime)
+    return datetime.now() - saved_at > MAX_AGE
+
+
+if data_is_stale():
+    with st.spinner("Downloading this week's asteroids from NASA..."):
         try:
             fetch_latest()
         except Exception as error:
-            st.error(f"Couldn't download data from NASA: {error}")
-            st.stop()
+            # If we already have older data, show that rather than nothing.
+            if not IN_FILE.exists():
+                st.error(f"Couldn't download data from NASA: {error}")
+                st.stop()
+            st.warning(f"Couldn't refresh from NASA, so this is older data: {error}")
 
 df = load_table()
 
